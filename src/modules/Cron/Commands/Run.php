@@ -12,17 +12,20 @@
  * with this source code in the file LICENSE
  */
 
+namespace Box\Mod\Cron\Commands;
+
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
-    name: 'cache:clear',
-    description: 'Clears the cache',
+    name: 'cron:run',
+    description: 'Executes the cron jobs',
     hidden: false
 )]
-class Command_Cache extends Command implements \Box\InjectionAwareInterface
+class Run extends Command implements \Box\InjectionAwareInterface
 {
     protected $di;
 
@@ -36,17 +39,30 @@ class Command_Cache extends Command implements \Box\InjectionAwareInterface
         return $this->di;
     }
 
+    protected function configure(): void
+    {
+        $this->addArgument('interval', InputArgument::OPTIONAL, 'Interval in minutes');
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $service = $this->di['mod_service']('system');
+        $service = $this->di['mod_service']('cron');
+        $interval = $input->getArgument('interval') ?? null;
+        
+        $output->writeln([
+            'FOSSBilling Cron Job Runner',
+            '============',
+            'Last executed: ' . $service->getLastExecutionTime(),
+            '',
+        ]);
         
         try {
-            $service->clearCache();
+            $service->runCrons($interval);
         } catch (Exception $e) {
             $output->writeln('<error>An error occurred: ' . $e->getMessage() . '</error>');
             return Command::FAILURE;
         } finally {
-            $output->writeln('<info>Successfully cleared the cache.</info>');
+            $output->writeln('<info>Successfully ran the cron jobs.</info>');
             return Command::SUCCESS;
         }
     }

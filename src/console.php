@@ -30,15 +30,33 @@ $application = new Application();
 $application->setName('FOSSBilling');
 $application->setVersion($di['mod_service']('system')->getVersion());
 
-// Dynamically load the commands
-$commands = glob(__DIR__ . '/library/Command/*.php');
-foreach ($commands as $command) {
-    $command = basename($command, '.php');
-    $class = 'Command_' . $command;
+$modules = $di['mod']('extension')->getCoreModules();
+
+// Check if the config file exists. If it does, the database is likely already initialized and this will work.
+if (file_exists($configPath)) {
+    // Try to load the modules from the database. If this fails, the database might not initialized yet. We will use the list of the core modules instead.
+    try {
+        $modules = $di['mod_service']('extension')->getCoreAndActiveModules();
+    } catch (Exception $e) {
+        // Do nothing
+    }
+}
+
+// Dynamically load the commands from the modules
+foreach ($modules as $module) {
+    // Our manifests declare the names in lowercase, but the module directories start with an uppercase letter.
+    $cap = ucfirst($module);
     
-    $command = new $class();
-    $command->setDi($di);
-    $application->add($command);
+    $commands = glob(__DIR__ . '/modules/' . $cap . '/Commands/*.php');
+
+    foreach ($commands as $command) {
+        $command = basename($command, '.php');
+        $class = 'Box\\Mod\\' . $cap . '\\Commands\\' . $command;
+
+        $command = new $class();
+        $command->setDi($di);
+        $application->add($command);
+    }
 }
 
 $application->run();
