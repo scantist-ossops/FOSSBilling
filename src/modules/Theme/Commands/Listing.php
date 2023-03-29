@@ -73,6 +73,7 @@ class Listing extends Command implements \Box\InjectionAwareInterface
             ]);
         }
 
+        $table->setHeaderTitle('Installed FOSSBilling Themes');
         $table->setStyle('box-double');
         $table->render();
 
